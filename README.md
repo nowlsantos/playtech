@@ -1,5 +1,5 @@
 # playtech - slotmachine
-###### A simple game test in javascript using PIXI.JS
+###### A simple game in Typescript using PIXI.JS
 
 **Tools and Dependencies**
 - Typescript 2.7
