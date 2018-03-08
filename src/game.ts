@@ -135,21 +135,27 @@ export class SlotMachine {
         switch ( params[0]){
             case 'start':
                 this.slotSound.play();
+
+                this.spinButton.isPressed = true;
+                this.spinButton.enabled(false);
+        
+                this.spinButton.sprite.texture = this.spinButton.textureDisabled;
                 break;
 
             case 'stop':
                 this.slotSound.stop();
+                
+                this.spinButton.isPressed = false;
+                this.spinButton.enabled(true);
+        
+                if ( this.spinButton.isHover ) {
+                    this.spinButton.sprite.texture = this.spinButton.textureHover;
+                }
                 break;
 
             default: null;
         }
 
-        this.spinButton.isPressed = false;
-        this.spinButton.enabled(true);
-
-        if ( this.spinButton.isHover ) {
-            this.spinButton.sprite.texture = this.spinButton.textureHover;
-        }
     }
 
     private getStripNames(resources: PIXI.loaders.ResourceDictionary): string[] {
