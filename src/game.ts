@@ -10,12 +10,14 @@ import { SlotSound } from './slot.sound';
 
 export class SlotMachine {
     app: PIXI.Application;
-
+    APP_WIDTH: number;
+    APP_HEIGHT: number;
+    
     private container: PIXI.Container;
-    private slotContainer: SlotContainer;
-    private spinButton: SpinButton;
+    private allSlotContainer: PIXI.Container;
+    private lastSlotContainer: SlotContainer;
     private slotContainers: SlotContainer[] = [];
-
+    private spinButton: SpinButton;
     private slotSound: SlotSound;
 
     constructor(w: number, h: number, color: number) {
@@ -27,7 +29,7 @@ export class SlotMachine {
         //console.log('initialize');
         const loader = new PIXI.loaders.Loader();
         loader.add('slots', 'assets/slotmachine.json')
-              .add('background', 'assets/background.jpg');
+              //.add('background', 'assets/background.jpg');
 
         loader.on("progress", (loader: PIXI.loaders.Loader, resources: PIXI.loaders.Resource) => {
             this.loadProgressHandler(loader.resources);
@@ -41,6 +43,7 @@ export class SlotMachine {
             this.onAssetLoaded(loader.resources);
         });
     }
+
     loadProgressHandler(resources: PIXI.loaders.ResourceDictionary) {
         //---handle the preloading animation here---
         //console.log('loadProgressHandler');
@@ -49,63 +52,73 @@ export class SlotMachine {
     loadComplete(resources: PIXI.loaders.ResourceDictionary) {
         //console.log("loadComplete");
         this.container = new PIXI.Container();
+        this.allSlotContainer = new PIXI.Container();
         this.app.stage.addChild(this.container);
+
+        this.container.addChild(this.allSlotContainer);
     }
 
     onAssetLoaded(resources: PIXI.loaders.ResourceDictionary) {
         //console.log("Asset Loaded");
-        const nwidth = this.app.renderer.width;
-        const nheight = this.app.renderer.height;
+        this.APP_WIDTH = this.app.renderer.width;
+        this.APP_HEIGHT = this.app.renderer.height;
         
         //---String representation in JSON---
         const slots = this.getStripNames(resources);
         
         //---Background Image---
-        const bg = PIXI.Sprite.fromImage('assets/background.jpg');
-        this.container.addChild(bg);
+        /* const bg = PIXI.Sprite.fromImage('assets/background.jpg');
+        this.container.addChild(bg); */
 
-        const rectBg = new PIXI.Graphics();
-        rectBg.beginFill(0xFFFFFF, 0.7);
-        rectBg.drawRoundedRect(80, 20, 1100, 630, 16);
-        rectBg.endFill();
-        this.container.addChild(rectBg);
+        /* const rect = new PIXI.Graphics();
+        rect.beginFill(0xFF99CC, 0.7);
+        rect.drawRoundedRect(this.APP_WIDTH/2-550, 20, 1100, 630, 16);
+        rect.endFill();
+        this.container.addChild(rect); */
         
-        /* DEBUG 
-        this.slotContainer = new SlotContainer(new PIXI.Container(), new Signal());
-        this.container.addChild(this.slotContainer.container);
-        this.slotContainer.initialize(slots, 210, 120);
-        this.slotContainer.signal.add(this.slotContainerSignalHandler, this); 
-        */
-        
-        //---Slot Container---
-        const SLOT_WIDTH = 210;
-        for ( let n = 0; n < 5; n++ ) {
-            this.slotContainer = new SlotContainer(new PIXI.Container(), n * 0.2);
-            this.container.addChild(this.slotContainer.container);
-            this.slotContainer.initialize(slots, SLOT_WIDTH + ( n % 5) * SLOT_WIDTH, 120);
-            this.slotContainer.hasSignal = false;
-            this.slotContainers.push(this.slotContainer);
-        }
-        const lastSlotCont = this.slotContainers[this.slotContainers.length-1];
-        lastSlotCont.addSignal();
-        lastSlotCont.signal.add(this.slotContainerSignalHandler, this);
-
         //---Frame Border---
         const frame = new FrameBorder(new PIXI.Container(), 'frame_border.png');
-        frame.container.position.set(this.container.width/2 - frame.sprite.getBounds().width/2, 10)
+        frame.container.position.set(this.APP_WIDTH/2 - frame.sprite.getBounds().width/2, 10)
         this.container.addChild(frame.container);
 
+        //---Slot Container---
+       const SLOT_WIDTH = 210;
+       const TOP_POS = 120;
+       
+       for ( let n = 0; n < 5; n++ ) {
+           const slotContainer = new SlotContainer(new PIXI.Container(), n * 0.2);
+           this.allSlotContainer.addChild(slotContainer.container);
+           
+           const posx = (frame.container.x + 30) + SLOT_WIDTH/2 + ( n % 5) * SLOT_WIDTH;
+           slotContainer.initialize(slots, posx , TOP_POS);
+           this.slotContainers.push(slotContainer);
+        }
+
+        //---create a mask for the allslotcontainer---
+        const masker = this.createMask(
+            SLOT_WIDTH-30, 40, 
+            frame.container.width-80, frame.container.height-50    
+        )
+        this.container.addChild(masker);
+        this.allSlotContainer.mask = masker;
+
+        //---we only listen and event to the last container added---
+        this.lastSlotContainer = this.slotContainers[this.slotContainers.length-1];
+        this.lastSlotContainer.addSignal();
+        this.lastSlotContainer.signal.add(this.slotContainerSignalHandler, this);
+        
         //---Arrow Image---
         const arrow = new ArrowDirection(new PIXI.Container(),'arrow_direction.png');
-        arrow.setPosition(20, window.innerHeight-arrow.container.getBounds().height);
+        arrow.setPosition(frame.container.x, 
+                          this.APP_HEIGHT-arrow.container.getBounds().height + 30);
         this.container.addChild(arrow.container);
     
         //---Spin Button---
         this.spinButton = new SpinButton(new PIXI.Container(), new Signal());
         this.spinButton.initialize(slots);
         this.spinButton.setPosition(
-            window.innerWidth - this.spinButton.container.getBounds().width * 2,
-            window.innerHeight - this.spinButton.container.getBounds().height - 30
+            this.APP_WIDTH - this.spinButton.container.getBounds().width * 2,
+            this.APP_HEIGHT - this.spinButton.container.getBounds().height
         );
         this.spinButton.makeInteractive();
         this.spinButton.signal.add(this.spinHandler, this);
@@ -118,10 +131,10 @@ export class SlotMachine {
         //---Scale the appliccation on resize---h
         const scaleManager = new ScaleManager(this.app);
         scaleManager.initialize();
-        scaleManager.resize(nwidth, nheight);
+        scaleManager.resize(this.APP_WIDTH, this.APP_HEIGHT);
         
         window.addEventListener('resize', (event) => {
-            scaleManager.resize(nwidth, nheight);
+            scaleManager.resize(this.APP_WIDTH, this.APP_HEIGHT);
         }); 
     }
 
@@ -164,11 +177,20 @@ export class SlotMachine {
             return [<string>(key), data[key]];
         });
     
-        let icons: string[] = [];
+        let strips: string[] = [];
         for ( let n = 0; n < result.length; n++ ) {
-            icons.push(result[n][0]);
+            strips.push(result[n][0]);
         }
         
-        return icons;
+        return strips;
+    }
+
+    private createMask(x: number, y: number, w: number, h: number): PIXI.Graphics {
+        const graphics = new PIXI.Graphics();
+        graphics.name = 'spritemask';
+        graphics.beginFill(0xFF99CC, 0.5);
+        graphics.drawRect(x, y, w, h);
+        graphics.endFill();
+        return graphics;
     }
 }

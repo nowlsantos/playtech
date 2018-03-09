@@ -4,17 +4,16 @@ import { Signal } from "./signal";
 import { SimpleText } from "./simple.text";
 
 export class SlotContainer {
-    slots: string[] = [];
     STRIP_HEIGHT: number;
     signal: Signal;
     hasSignal = false;
+    slots: string[] = [];
 
     readonly SLOT_WIDTH = 212;
     readonly SLOT_SIZE = 145;
     private strips: PIXI.Sprite[] =  [];
     private allSlots: SlotSprite[] = [];
-    private masker: PIXI.Graphics;
-
+    
     constructor(public container: PIXI.Container, 
                 public delay: number) {}
 
@@ -27,9 +26,7 @@ export class SlotContainer {
                 this.slots.push(slots[n]);   
             }
         }
-        this.masker = this.createMask(x-105, y-80);
-        this.container.addChild(this.masker);
-    
+        
         //---arranged a couple of slots container vertically---
         const count = this.slots.length;
         this.STRIP_HEIGHT = count * this.SLOT_SIZE;
@@ -65,8 +62,6 @@ export class SlotContainer {
         }
         this.strips.push(holder);
         this.container.addChild(holder);
-
-        holder.mask = this.masker;
     }
 
     addSignal() {
@@ -162,14 +157,5 @@ export class SlotContainer {
 
     private randomIntFromInterval(min: number, max: number): number {
         return Math.floor(Math.random() * ( max - min + 1 ) + min );
-    }
-
-    private createMask(x: number, y: number): PIXI.Graphics {
-        const graphics = new PIXI.Graphics();
-        graphics.name = 'spritemask';
-        graphics.beginFill(0xFFFFFF);
-        graphics.drawRect(x, y, this.SLOT_WIDTH, 580);
-        graphics.endFill();
-        return graphics;
     }
 }
